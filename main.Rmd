@@ -1,0 +1,118 @@
+---
+title: "Cyclist"
+author: "Omer"
+date: "2023-07-21"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# Google data analytics capestone project: Cyclistic analysis
+
+This is a case-study of a bike-share company called Cyclistic that provides various bicycle sharing services.
+
+### The business task
+
+How do annual members and casual riders use Cyclistic bikes differently?
+
+### Data preparation
+
+this data was obtained from this [source](https://divvy-tripdata.s3.amazonaws.com/index.html) .It was made available by Motivate international INC. under this [license](https://ride.divvybikes.com/data-license-agreement)
+
+The data consists of 12 csv files corresponding to every month in the last year. the files are stored in a directory called data.
+
+```{r include = TRUE}
+files <- list.files("data", recursive=TRUE, full.names=TRUE)
+
+data.frame(file=files,size_MB = file.size(files)/(1024^2))
+```
+
+the total of the 12 months amounts to more than 5 million rows (almost one gegabyte). Therefore the data has been combined into one csv file (automated via python) and uploaded into a MySQL database called "cyclisitc". the table is called 'yeardata'.
+
+access to the database is going to be needed. for that 'RMySQL' can be used
+
+```{r include = TRUE}
+#install.packages('RMySQL');
+#library('RMySQL');
+
+mysqlconnection = dbConnect(RMySQL::MySQL(), dbname='cyclisitc', host='localhost', port=3306, user='root', password="Database@1234");
+
+table = dbSendQuery(mysqlconnection, 'select * from yeardata');
+print(fetch(table,n=10));
+```
+
+Which confirms that we have successfully connected to the database.
+
+### Data processing
+
+let us check the null first
+
+```{r echo=TRUE, error=FALSE, results='hide'}
+invisible(dbClearResult(table));
+result = dbSendQuery(mysqlconnection, "select count(*) - count(type) as type_null, count(*) - count(start_station_name) as start_station_name_null, count(*) - count(start_station_id) as start_station_id_null, count(*) - count(end_station_name) as end_station_name_null, count(*) - count(end_station_id) as end_staiton_id_null, count(*) - count(start_time) as start_time_null, count(*) - count(end_time) as end_time_null, count(*) - count(start_lat) as start_lat_null, count(*) - count(end_lat) as end_lat_null, count(*) - count(start_lng) as start_lng_null, count(*) - count(end_lng) as end_lng_null, count(*) - count(member_casual) as member_casual_null from yeardata");
+print(fetch(result));
+```
+
+most of the missing data is due to the station names and ids. However, alot of the spatial analysis could be acheived using the coordintes. The data has less than 0.1% missing coordinate-data. Such small percentage could be ignored.
+
+Before deleting these missing entries, check for outliers
+
+```{r include = TRUE}
+invisible(dbClearResult(result));
+result = dbSendQuery(mysqlconnection, "select min(start_lat), max(start_lat), avg(start_lat), min(start_lng), max(start_lng), avg(start_lng), min(end_lat), max(end_lat), avg(end_lat), min(end_lng), max(end_lng), avg(end_lng) from yeardata where end_lat is not null;");
+print(fetch(result));
+```
+
+the coordinates of the end destinations seem to have outliers
+
+```{r include=TRUE}
+invisible(dbClearResult(result));
+result = dbSendQuery(mysqlconnection, "select count(id) as cnt from yeardata where end_lat < 40;");
+print(fetch(result));
+invisible(dbClearResult(result));
+result = dbSendQuery(mysqlconnection, "select count(id) as cnt from yeardata where end_lng >-80;");
+print(fetch(result));
+
+```
+
+we have only 10 outliers with each coordinate. this might be due to some error in storing. Either way these rows in addition to the null values can be deleted without much issue.
+
+```{r include=TRUE}
+invisible(dbClearResult(result));
+result = dbSendQuery(mysqlconnection, "delete from yeardata where end_lat is null or end_lng is null or end_lat<40 or end_lng>-80;");
+```
+
+### Analysis
+
+Since the dataset is relatively large, instead of adding new columns to it, measurments like distance and duration will be calculated dynamically. Start of by importing tidyverse and ggplot.
+
+```{r include =TRUE}
+#install.packages("tidyverse");
+library("tidyverse");
+library("ggplot2");
+```
+
+#### ride_type
+
+```{r include = TRUE}
+invisible(dbClearResult(result));
+result = dbSendQuery(mysqlconnection, "select count(id) as cnt, type, member_casual from yeardata group by type, member_casual;");
+data.frame = fetch(result);
+print(data.frame);
+ggplot(data = data.frame) + geom_bar(mapping = aes(x=type, y = cnt, fill = type), stat='identity', position = 'dodge') + facet_wrap(~member_casual);
+
+```
+findings: all docked bicycles are used by casual members
+
+#### duration
+```{r include = TRUE}
+invisible(dbClearResult(result));
+result = dbSendQuery(mysqlconnection, "select min timediff(start_time, end_time) from yeardata;");
+data.frame = fetch(result);
+print(data.frame);
+```
+#### hour
+
+#### day
+
+#### month
