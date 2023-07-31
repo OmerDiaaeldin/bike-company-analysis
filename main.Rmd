@@ -1,27 +1,83 @@
----
-title: "Cyclistic"
-author: "Omer"
-date: "2023-07-21"
-output:
-  html_document: default
-  pdf_document: default
----
-
-# Case Study: How Does a Bike-Share Navigate Speedy Success?
-
-This case study is the final capestone project for the google data analytics professional certificate
+# Case Study - a new marketing strategy for a bike-sharing company
 
 ## Scenario
 
-I am a junior data analyst working in the marketing analyst team at Cyclistic, a bike-share company in Chicago. The director of marketing believes the company's future success depends on maximizing the number of annual memberships. Therefore, the team wants to understand how casual riders and annual members use Cyclistic bikes diﬀerently. From these insights, they will design a new marketing strategy to convert casual riders into annual members. But ﬁrst, Cyclistic executives must approve the recommendations, so they must be backed up with compelling data insights and professional data visualizations.
+I am assuming the role of a junior data analyst working in the marketing analyst team at Cyclistic, a bike-share company in Chicago. The director of marketing believes the company's future success depends on maximizing the number of annual memberships. Therefore, the team wants to understand how casual riders and annual members use Cyclistic bikes diﬀerently. From these insights, they will design a new marketing strategy to convert casual riders into annual members. But ﬁrst, Cyclistic executives must approve these recommendations, so they must be backed up with compelling data insights and professional data visualizations.
 
 ## About the company
 
 In 2016, Cyclistic launched a successful bike-share oﬀering. Since then, the program has grown to a ﬂeet of 5,824 bicycles that are geotracked and locked into a network of 692 stations across Chicago. The bikes can be unlocked from one station and returned to any other station in the system anytime. Until now, Cyclistic's marketing strategy relied on building general awareness and appealing to broad consumer segments. One approach that helped make these things possible was the ﬂexibility of its pricing plans: single-ride passes, full-day passes, and annual memberships. Customers who purchase single-ride or full-day passes are referred to as casual riders. Customers who purchase annual memberships are Cyclistic members. Cyclistic's ﬁnance analysts have concluded that annual members are much more proﬁtable than casual riders. Although the pricing ﬂexibility helps Cyclistic attract more customers, Moreno believes that maximizing the number of annual members will be key to future growth. Rather than creating a marketing campaign that targets all-new customers, Moreno believes there is a very good chance to convert casual riders into members. She notes that casual riders are already aware of the Cyclistic program and have chosen Cyclistic for their mobility needs. Moreno has set a clear goal: Design marketing strategies aimed at converting casual riders into annual members. In order to do that, however, the marketing analyst team needs to better understand how annual members and casual riders diﬀer, why casual riders would buy a membership, and how digital media could aﬀect their marketing tactics. Moreno and her team are interested in analyzing the Cyclistic historical bike trip data to identify trends.
 
 ## I: ASK
+goal: clearly state the business task
+### What is the problem that is being solved?
+
+I have been assigned by Moreno the following question : "how do annual members and casual riders use Cyclistic differently?"
+
+### How can my insights help drive business decisions?
+
+understanding the differences between members and casual riders would help us develop a marketing strategy to convert more casual riders to annual members
 
 ### The business task
-Determine how annual members and casual riders use Cyclistic differnetly
+determine the differences between members and casual riders   
 
-### 
+## Prepare
+
+### Where is the data located?
+The data is a public [dataset](https://divvy-tripdata.s3.amazonaws.com/index.html) under the [license](https://www.divvybikes.com/data-license-agreement) that was made available by Motivate international INC. The information of the last 12 months was downloaded and saved under the directory "/data".
+
+### How is the data orgainzed?
+The data consists of 12 csv files. Each file is a table of the following 13 columns : (ride_id, rideable_type [electric - classic - docked], started_at [datetime], ended_at [datetime], start_station_name, start_staiton_id, end_station_name, end_station_id, start_lat, start_lng, end_lat, end_lng, member_causal [member - casual])
+
+### Are there any issues with bias or credibility?
+This data was obtained by recording the actual trip data of the bike-sharing company. Therefore, the data is unbiased.
+
+## Process
+
+### Tools used
+The language R is used to be able to handle the large amount of data.
+
+### import the data
+
+```{r include=TRUE}
+#install.packages("tidyverse")
+library(readr) #for reading the initial files with data
+library(dplyr) #for combining all data into one data frame
+library(hms) #for extracting hours from datetime
+library(lubridate) #for date functions
+library(tidyr) #for data cleaning
+
+#install.packages("geosphere") #for calculation of distance between two geo points
+library(geosphere) 
+
+#install.packages("skimr") #for viewing and evaluating the data
+library(skimr)
+
+#install.packages("ggplot2") #for visualizations
+library(ggplot2)
+
+#install.packages("ggmap") #for map visuals
+library(ggmap)
+
+#import the data files
+July2022 <- read_csv("data/202207-divvy-tripdata.csv")
+Aug2022 <- read_csv("data/202208-divvy-tripdata.csv")
+Sep2022 <- read_csv("data/202209-divvy-publictripdata.csv")
+Oct2022 <- read_csv("data/202210-divvy-tripdata.csv")
+Nov2022 <- read_csv("data/202211-divvy-tripdata.csv")
+Dec2022 <- read_csv("data/202212-divvy-tripdata.csv")
+Jan2023 <- read_csv("data/202301-divvy-tripdata.csv")
+Feb2023 <- read_csv("data/202302-divvy-tripdata.csv")
+Mar2023 <- read_csv("data/202303-divvy-tripdata.csv")
+Apr2023 <- read_csv("data/202304-divvy-tripdata.csv")
+May2023 <- read_csv("data/202305-divvy-tripdata.csv")
+June2023 <- read_csv("data/202306-divvy-tripdata.csv")
+
+#combine everything into one dataframe
+df <- bind_rows(July2022, Aug2022, Sep2022, Oct2022, Nov2022, Dec2022, Jan2023, Feb2023, Mar2023, Apr2023, May2023, June2023);
+```
+
+### Summarize the data
+```{r include=TRUE}
+skim_without_charts(df);
+```
