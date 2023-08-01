@@ -9,8 +9,8 @@ I am assuming the role of a junior data analyst working in the marketing analyst
 In 2016, Cyclistic launched a successful bike-share oﬀering. Since then, the program has grown to a ﬂeet of 5,824 bicycles that are geotracked and locked into a network of 692 stations across Chicago. The bikes can be unlocked from one station and returned to any other station in the system anytime. Until now, Cyclistic's marketing strategy relied on building general awareness and appealing to broad consumer segments. One approach that helped make these things possible was the ﬂexibility of its pricing plans: single-ride passes, full-day passes, and annual memberships. Customers who purchase single-ride or full-day passes are referred to as casual riders. Customers who purchase annual memberships are Cyclistic members. Cyclistic's ﬁnance analysts have concluded that annual members are much more proﬁtable than casual riders. Although the pricing ﬂexibility helps Cyclistic attract more customers, Moreno believes that maximizing the number of annual members will be key to future growth. Rather than creating a marketing campaign that targets all-new customers, Moreno believes there is a very good chance to convert casual riders into members. She notes that casual riders are already aware of the Cyclistic program and have chosen Cyclistic for their mobility needs. Moreno has set a clear goal: Design marketing strategies aimed at converting casual riders into annual members. In order to do that, however, the marketing analyst team needs to better understand how annual members and casual riders diﬀer, why casual riders would buy a membership, and how digital media could aﬀect their marketing tactics. Moreno and her team are interested in analyzing the Cyclistic historical bike trip data to identify trends.
 
 ## I: ASK
-goal: clearly state the business task
-### What is the problem that is being solved?
+
+goal: clearly state the business task \### What is the problem that is being solved?
 
 I have been assigned by Moreno the following question : "how do annual members and casual riders use Cyclistic differently?"
 
@@ -19,27 +19,32 @@ I have been assigned by Moreno the following question : "how do annual members a
 understanding the differences between members and casual riders would help us develop a marketing strategy to convert more casual riders to annual members
 
 ### The business task
-determine the differences between members and casual riders   
 
-## Prepare
+determine the differences between members and casual riders
+
+## II: Prepare
 
 ### Where is the data located?
+
 The data is a public [dataset](https://divvy-tripdata.s3.amazonaws.com/index.html) under the [license](https://www.divvybikes.com/data-license-agreement) that was made available by Motivate international INC. The information of the last 12 months was downloaded and saved under the directory "/data".
 
 ### How is the data orgainzed?
+
 The data consists of 12 csv files. Each file is a table of the following 13 columns : (ride_id, rideable_type [electric - classic - docked], started_at [datetime], ended_at [datetime], start_station_name, start_staiton_id, end_station_name, end_station_id, start_lat, start_lng, end_lat, end_lng, member_causal [member - casual])
 
 ### Are there any issues with bias or credibility?
+
 This data was obtained by recording the actual trip data of the bike-sharing company. Therefore, the data is unbiased.
 
-## Process
+## III: Process
 
 ### Tools used
+
 The language R is used to be able to handle the large amount of data.
 
 ### import the data
 
-```{r include=TRUE}
+```{r include=TRUE, message = FALSE}
 #install.packages("tidyverse")
 library(readr) #for reading the initial files with data
 library(dplyr) #for combining all data into one data frame
@@ -55,9 +60,6 @@ library(skimr)
 
 #install.packages("ggplot2") #for visualizations
 library(ggplot2)
-
-#install.packages("ggmap") #for map visuals
-library(ggmap)
 
 #import the data files
 July2022 <- read_csv("data/202207-divvy-tripdata.csv")
@@ -77,7 +79,80 @@ June2023 <- read_csv("data/202306-divvy-tripdata.csv")
 df <- bind_rows(July2022, Aug2022, Sep2022, Oct2022, Nov2022, Dec2022, Jan2023, Feb2023, Mar2023, Apr2023, May2023, June2023);
 ```
 
+free the memory of these individual dataframes
+```{r include=TRUE}
+rm(July2022, Aug2022, Sep2022, Oct2022, Nov2022, Dec2022, Jan2023, Feb2023, Mar2023, Apr2023, May2023, June2023);
+
+#free unused memory
+gc();
+```
+
 ### Summarize the data
+
 ```{r include=TRUE}
 skim_without_charts(df);
+```
+
+### Null values
+
+Start by deleting the null rows
+
+```{r include=TRUE}
+no_null_df <- drop_na(df)
+
+#delete and free
+rm(df);
+gc();
+```
+
+### Wrong entries
+
+Chicago has coordinates (41.97N, 87.62W). But it seems that there are latitude and longitude values of 0 which are clearly due to some error. These rows need to be removed. In addition to that, all entries with end time before start time must be removed too
+
+```{r include=TRUE}
+library("dplyr");
+processed_df <- no_null_df %>% filter(started_at < ended_at & (end_lat != 0 | end_lng != 0))
+
+# delete and free
+rm(no_null_df);
+gc();
+
+skim_without_charts(processed_df)
+```
+
+add the following columns: distance , hour, day(of the week), duration, month
+```{r include=TRUE}
+processed_df <- processed_df %>%
+  mutate(distance = distHaversine(cbind(start_lng, start_lat), cbind(end_lng, end_lat))) %>% 
+  mutate(hour = hour(started_at)) %>%
+  mutate(day = format(as.Date(started_at),"%d")) %>%
+  mutate(day_of_week = format(as.Date(started_at), "%A")) %>%
+  mutate(month = month(started_at, LABEL=TRUE)) %>%
+  mutate(duration = as.numeric(as.character(difftime(ended_at, started_at))));
+```
+
+```{r include=TRUE}
+skim_without_charts(processed_df);
+```
+## IV: Analyze
+
+### Total number of trips
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(member_casual) %>% 
+  summarise(ride_count=n()) %>% 
+  ggplot(mapping=aes(x=member_casual, y = ride_count)) +
+  geom_bar(stat='identity');
+
+```
+
+### rideable type
+```{r include=TRUE}
+processed_df %>% 
+  group_by(member_casual, rideable_type) %>% 
+  summarise(ride_count=n()) %>% 
+  ggplot(mapping=aes(x=rideable_type, y = ride_count, fill = member_casual)) +
+  geom_bar(stat='identity', position='dodge');
+
 ```
