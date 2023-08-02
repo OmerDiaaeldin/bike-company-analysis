@@ -80,6 +80,7 @@ df <- bind_rows(July2022, Aug2022, Sep2022, Oct2022, Nov2022, Dec2022, Jan2023, 
 ```
 
 free the memory of these individual dataframes
+
 ```{r include=TRUE}
 rm(July2022, Aug2022, Sep2022, Oct2022, Nov2022, Dec2022, Jan2023, Feb2023, Mar2023, Apr2023, May2023, June2023);
 
@@ -121,38 +122,146 @@ skim_without_charts(processed_df)
 ```
 
 add the following columns: distance , hour, day(of the week), duration, month
+
 ```{r include=TRUE}
 processed_df <- processed_df %>%
   mutate(distance = distHaversine(cbind(start_lng, start_lat), cbind(end_lng, end_lat))) %>% 
   mutate(hour = hour(started_at)) %>%
   mutate(day = format(as.Date(started_at),"%d")) %>%
   mutate(day_of_week = format(as.Date(started_at), "%A")) %>%
-  mutate(month = month(started_at, LABEL=TRUE)) %>%
+  mutate(month = month(started_at, label=TRUE)) %>%
   mutate(duration = as.numeric(as.character(difftime(ended_at, started_at))));
 ```
 
 ```{r include=TRUE}
 skim_without_charts(processed_df);
 ```
+
 ## IV: Analyze
 
-### Total number of trips
+### 1 - number of trips
+
+#### Total
 
 ```{r include=TRUE}
 processed_df %>% 
   group_by(member_casual) %>% 
   summarise(ride_count=n()) %>% 
-  ggplot(mapping=aes(x=member_casual, y = ride_count)) +
-  geom_bar(stat='identity');
+  ggplot(mapping=aes(x=member_casual, y = ride_count, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+
+#### by month
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(month, member_casual) %>% 
+  summarise(ride_count=n(), .groups="drop") %>% 
+  ggplot(mapping=aes(x=month, y = ride_count, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+
+#### by day
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(day, member_casual) %>% 
+  summarise(ride_count=n(), .groups="drop") %>% 
+  ggplot(mapping=aes(x=day, y = ride_count, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+
+#### by week day
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(day_of_week, member_casual) %>% 
+  summarise(ride_count=n(), .groups="drop") %>% 
+  ggplot(mapping=aes(x=day_of_week, y = ride_count, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+
+#### by hour
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(hour, member_casual) %>% 
+  summarise(ride_count=n(), .groups="drop") %>% 
+  ggplot(mapping=aes(x=hour, y = ride_count, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
 
 ```
 
 ### rideable type
+
 ```{r include=TRUE}
 processed_df %>% 
   group_by(member_casual, rideable_type) %>% 
   summarise(ride_count=n()) %>% 
   ggplot(mapping=aes(x=rideable_type, y = ride_count, fill = member_casual)) +
   geom_bar(stat='identity', position='dodge');
+
+```
+
+
+
+### 3 - average distance of trips
+
+#### Total
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(distance, member_casual) %>% 
+  summarise(avg_distance=mean(distance)) %>% 
+  ggplot(mapping=aes(y = avg_distance, x=member_casual, fill = member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+
+#### by month
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(month, distance, member_casual) %>% 
+  summarise(avg_distance = mean(distance), .groups="drop") %>% 
+  ggplot(mapping=aes(x=month, y = avg_distance, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+
+#### by day
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(day, distance, member_casual) %>% 
+  summarise(avg_distance = mean(distance), .groups="drop") %>% 
+  ggplot(mapping=aes(x=day, y = avg_distance, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+
+#### by week day
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(day_of_week, distance, member_casual) %>% 
+  summarise(avg_distance = mean(distance), .groups="drop") %>% 
+  ggplot(mapping=aes(x=day_of_week, y = avg_distance, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+
+#### by hour
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(hour, distance, member_casual) %>% 
+  summarise(avg_distance = mean(distance), .groups="drop") %>% 
+  ggplot(mapping=aes(x=hour, y = avg_distance, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
 
 ```
