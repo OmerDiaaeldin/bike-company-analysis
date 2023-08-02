@@ -118,7 +118,7 @@ processed_df <- no_null_df %>% filter(started_at < ended_at & (end_lat != 0 | en
 rm(no_null_df);
 gc();
 
-skim_without_charts(processed_df)
+#skim_without_charts(processed_df)
 ```
 
 add the following columns: distance , hour, day(of the week), duration, month
@@ -152,6 +152,8 @@ processed_df %>%
 
 ```
 
+As expected, members use the bikes for more trips. 
+
 #### by month
 
 ```{r include=TRUE}
@@ -162,21 +164,17 @@ processed_df %>%
   geom_bar(stat='identity', position="dodge");
 
 ```
-
-#### by day
-
-```{r include=TRUE}
-processed_df %>% 
-  group_by(day, member_casual) %>% 
-  summarise(ride_count=n(), .groups="drop") %>% 
-  ggplot(mapping=aes(x=day, y = ride_count, fill=member_casual)) +
-  geom_bar(stat='identity', position="dodge");
-
-```
+Both distributions are approximately normal.
+The members peak at August but the number of rides per month drops slowly around this peak.
+The casual riders peak at July. However, the values drop quickly around the peak.
+Both distributions could be attributed to the fact that more riders are expected around summer months (June - September).
 
 #### by week day
 
 ```{r include=TRUE}
+processed_df$day_of_week <- ordered(processed_df$day_of_week, 
+                                         levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
 processed_df %>% 
   group_by(day_of_week, member_casual) %>% 
   summarise(ride_count=n(), .groups="drop") %>% 
@@ -185,18 +183,25 @@ processed_df %>%
 
 ```
 
-#### by hour
+Annual members use the bicycles more during the week.
+Casual riders prefer to use them during the weekend.
 
+The explanation for this could be that members subscribe to access the bikes on daily basis like going to work. While casual riders rent them occasionally for entertainment on their free time in the weekend.
+
+To test this theory more I am going to plot the distribution across each day of the week
+
+#### by hour
 ```{r include=TRUE}
 processed_df %>% 
-  group_by(hour, member_casual) %>% 
-  summarise(ride_count=n(), .groups="drop") %>% 
-  ggplot(mapping=aes(x=hour, y = ride_count, fill=member_casual)) +
-  geom_bar(stat='identity', position="dodge");
-
+  ggplot(aes(hour, fill=member_casual)) + 
+  geom_bar(position = "dodge") + 
+  facet_wrap(~day_of_week);
 ```
 
-### rideable type
+For weekdays, A lot of bikes are used from 5-10 am and 3-8 pm by members. these hours correspond to times where people are riding to or from work. Casual riders display a similar but diluted pattern.
+The distribution is almost identical for both categories in the weekend. This aids the conclusion that the bikes are used on the weekends for leisure purposes by members and casual riders
+
+### 2 - rideable type
 
 ```{r include=TRUE}
 processed_df %>% 
@@ -207,15 +212,13 @@ processed_df %>%
 
 ```
 
-
-
 ### 3 - average distance of trips
 
 #### Total
 
 ```{r include=TRUE}
 processed_df %>% 
-  group_by(distance, member_casual) %>% 
+  group_by(member_casual) %>% 
   summarise(avg_distance=mean(distance)) %>% 
   ggplot(mapping=aes(y = avg_distance, x=member_casual, fill = member_casual)) +
   geom_bar(stat='identity', position="dodge");
@@ -226,20 +229,9 @@ processed_df %>%
 
 ```{r include=TRUE}
 processed_df %>% 
-  group_by(month, distance, member_casual) %>% 
+  group_by(month, member_casual) %>% 
   summarise(avg_distance = mean(distance), .groups="drop") %>% 
   ggplot(mapping=aes(x=month, y = avg_distance, fill=member_casual)) +
-  geom_bar(stat='identity', position="dodge");
-
-```
-
-#### by day
-
-```{r include=TRUE}
-processed_df %>% 
-  group_by(day, distance, member_casual) %>% 
-  summarise(avg_distance = mean(distance), .groups="drop") %>% 
-  ggplot(mapping=aes(x=day, y = avg_distance, fill=member_casual)) +
   geom_bar(stat='identity', position="dodge");
 
 ```
@@ -247,8 +239,11 @@ processed_df %>%
 #### by week day
 
 ```{r include=TRUE}
+processed_df$day_of_week <- ordered(processed_df$day_of_week, 
+                                         levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
 processed_df %>% 
-  group_by(day_of_week, distance, member_casual) %>% 
+  group_by(day_of_week, member_casual) %>% 
   summarise(avg_distance = mean(distance), .groups="drop") %>% 
   ggplot(mapping=aes(x=day_of_week, y = avg_distance, fill=member_casual)) +
   geom_bar(stat='identity', position="dodge");
@@ -259,9 +254,80 @@ processed_df %>%
 
 ```{r include=TRUE}
 processed_df %>% 
-  group_by(hour, distance, member_casual) %>% 
+  group_by(hour, member_casual) %>% 
   summarise(avg_distance = mean(distance), .groups="drop") %>% 
   ggplot(mapping=aes(x=hour, y = avg_distance, fill=member_casual)) +
   geom_bar(stat='identity', position="dodge");
 
 ```
+The distance seems to be slightly more for casual riders. But the overall difference is very small. This makes sense because the data recorded tells the distance between the stations and not the actual distance covered.
+
+### 4 - average duration of trips
+#### Total
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(member_casual) %>% 
+  summarise(avg_duration=mean(duration), .groups = "drop") %>% 
+  ggplot(mapping=aes(y = avg_duration, x=member_casual, fill = member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+
+The average casual rider takes double the trip duration.
+
+#### by month
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(month, member_casual) %>% 
+  summarise(avg_duration = mean(duration), .groups="drop") %>% 
+  ggplot(mapping=aes(x=month, y = avg_duration, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+This phenomen holds for every month of the year
+
+#### by week day
+
+```{r include=TRUE}
+processed_df$day_of_week <- ordered(processed_df$day_of_week, 
+                                         levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
+processed_df %>% 
+  group_by(day_of_week, member_casual) %>% 
+  summarise(avg_duration = mean(duration), .groups="drop") %>% 
+  ggplot(mapping=aes(x=day_of_week, y = avg_duration, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+
+#### by hour
+
+```{r include=TRUE}
+processed_df %>% 
+  group_by(hour, member_casual) %>% 
+  summarise(avg_duration = mean(duration), .groups="drop") %>% 
+  ggplot(mapping=aes(x=hour, y = avg_duration, fill=member_casual)) +
+  geom_bar(stat='identity', position="dodge");
+
+```
+Conclusion: The casual riders take the bikes for longer trips 
+
+## V: Share and Act
+
+### Findings:
+  - The company's services are mostly used during the Summer
+  - annual members use Cyclistic's services significantly more at work hours. Other than that the usage is similar between          the two categories
+  - casual riders ride more on the weekends
+  - docked bikes are used by casual riders only
+  - the distance between the start and end points is independent of the category
+  - casual riders prefer to take longer duration trips
+  
+### Suggestions
+  - Offer weekend specific memberships to attract more casual riders
+  - Offer discounts for longer trips
+  
+### Further analysis
+  - survey customers on their purpose for using Cyclistic's services
+  - record customer id to calculate frequency of usage by each category
